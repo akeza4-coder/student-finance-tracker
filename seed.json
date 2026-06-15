@@ -1,0 +1,92 @@
+[
+  {
+    "id": "txn_mock_001",
+    "description": "Biochemistry Standard Textbooks",
+    "amount": 145.50,
+    "category": "Books",
+    "date": "2026-06-01",
+    "createdAt": "2026-06-01T08:00:00.000Z",
+    "updatedAt": "2026-06-01T08:00:00.000Z"
+  },
+  {
+    "id": "txn_mock_002",
+    "description": "Subway Weekly Commuter Transit Pass",
+    "amount": 45.00,
+    "category": "Transport",
+    "date": "2026-06-02",
+    "createdAt": "2026-06-02T09:15:00.000Z",
+    "updatedAt": "2026-06-02T09:15:00.000Z"
+  },
+  {
+    "id": "txn_mock_003",
+    "description": "Student Housing Quad Housing Fees",
+    "amount": 350.00,
+    "category": "Fees",
+    "date": "2026-06-03",
+    "createdAt": "2026-06-03T10:00:00.000Z",
+    "updatedAt": "2026-06-03T10:00:00.000Z"
+  },
+  {
+    "id": "txn_mock_004",
+    "description": "Late Night Cafeteria Dinner Combo",
+    "amount": 14.75,
+    "category": "Food",
+    "date": "2026-06-04",
+    "createdAt": "2026-06-04T19:30:00.000Z",
+    "updatedAt": "2026-06-04T19:30:00.000Z"
+  },
+  {
+    "id": "txn_mock_005",
+    "description": "Campus Cinema Ticket Night",
+    "amount": 12.00,
+    "category": "Entertainment",
+    "date": "2026-06-05",
+    "createdAt": "2026-06-05T21:00:00.000Z",
+    "updatedAt": "2026-06-05T21:00:00.000Z"
+  },
+  {
+    "id": "txn_mock_006",
+    "description": "Engineering Lab Scientific Calculator",
+    "amount": 89.99,
+    "category": "Books",
+    "date": "2026-06-06",
+    "createdAt": "2026-06-06T11:00:00.000Z",
+    "updatedAt": "2026-06-06T11:00:00.000Z"
+  },
+  {
+    "id": "txn_mock_007",
+    "description": "Morning Double Espresso Coffee",
+    "amount": 4.50,
+    "category": "Food",
+    "date": "2026-06-07",
+    "createdAt": "2026-06-07T07:45:00.000Z",
+    "updatedAt": "2026-06-07T07:45:00.000Z"
+  },
+  {
+    "id": "txn_mock_008",
+    "description": "Inter-Campus Shuttle Access Tokens",
+    "amount": 15.00,
+    "category": "Transport",
+    "date": "2026-06-08",
+    "createdAt": "2026-06-08T14:20:00.000Z",
+    "updatedAt": "2026-06-08T14:20:00.000Z"
+  },
+  {
+    "id": "txn_mock_009",
+    "description": "Annual Student Health Insurance Insurance Plan",
+    "amount": 120.00,
+    "category": "Fees",
+    "date": "2026-06-09",
+    "createdAt": "2026-06-09T09:00:00.000Z",
+    "updatedAt": "2026-06-09T09:00:00.000Z"
+  },
+  {
+    "id": "txn_mock_010",
+    "description": "Recreation Center Rock Climbing Equipment Rental",
+    "amount": 25.00,
+    "category": "Entertainment",
+    "date": "2026-06-10",
+    "createdAt": "2026-06-10T16:00:00.000Z",
+    "updatedAt": "2026-06-10T16:00:00.000Z"
+  }
+]
