@@ -1,17 +1,15 @@
-export function compileSafeRegex(rawString, flags = 'i') {
-  if (!rawString) return null;
+export function compileSafeRegex(input, flags = 'i') {
+  if (!input) return null;
   try {
-    return new RegExp(rawString, flags);
+    return new RegExp(input, flags);
   } catch (e) {
     throw new Error(e.message);
   }
 }
 
-export function executeHighlightMark(targetText, compiledRegex) {
-  const textString = String(targetText);
-  if (!compiledRegex) return textString;
-  
-  // Resets lastIndex state on global regular expression configurations
-  compiledRegex.lastIndex = 0; 
-  return textString.replace(compiledRegex, match => `<mark>${match}</mark>`);
+export function executeHighlightMark(text, regex) {
+  const standardString = String(text);
+  if (!regex) return standardString;
+  regex.lastIndex = 0; 
+  return standardString.replace(regex, match => `<mark>${match}</mark>`);
 }

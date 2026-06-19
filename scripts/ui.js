@@ -3,403 +3,291 @@ import { runFieldDiagnostic } from './validators.js';
 import { compileSafeRegex, executeHighlightMark } from './search.js';
 import { validateIncomingJSON } from './storage.js';
 
-// Exchange Conversion Indexes Core Metrics (Manual Rates)
-const FX_INDEX = { USD: 1.0, EUR: 0.92, GBP: 0.78 };
-const CURRENCY_GLYPHS = { USD: "$", EUR: "€", GBP: "£" };
+const FX_INDEX = { RWF: 1.0, USD: 0.00074, EUR: 0.00069 };
+const CURRENCY_GLYPHS = { RWF: "Frw", USD: "$", EUR: "€" };
 
 document.addEventListener('DOMContentLoaded', () => {
-  initializeCoreDOMHooks();
-  renderAppEcosystem();
+  seedFriendlyInitialSampleData();
+  setupClickHandlersLayout();
+  refreshUserDisplay();
 });
 
-function initializeCoreDOMHooks() {
-  // Primary Action Hook Injections
-  const txForm = document.getElementById('transaction-mutation-form');
-  txForm.addEventListener('submit', handleFormSubmission);
+function seedFriendlyInitialSampleData() {
+  const currentState = StateManager.getState();
+  if (!currentState.transactions || currentState.transactions.length === 0) {
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(); d.setDate(d.getDate() - 1); const formatYesterday = yesterday.toISOString().split('T')[0];
+    
+    const sampleItems = [
+      { id: "item_01", description: "Campus Cafeteria Lunch", amount: 2500, category: "Food", date: today },
+      { id: "item_02", description: "MTN Mobile Airtime Topup Plan", amount: 1000, category: "Other", date: today },
+      { id: "item_03", description: "Software Engineering Textbook Bundle", amount: 15000, category: "Books", date: formatYesterday }
+    ];
+    
+    sampleItems.forEach(item => StateManager.addOrUpdateTransaction(item));
+  }
+}
+
+function setupClickHandlersLayout() {
+  document.getElementById('transaction-mutation-form').addEventListener('submit', handleFormSubmitAction);
+  document.getElementById('form-cancel-btn').addEventListener('click', dropEditingState);
+  document.getElementById('sort-selector').addEventListener('change', refreshSortedDisplay);
+  document.getElementById('sort-order-selector').addEventListener('change', refreshSortedDisplay);
+  document.getElementById('search-input').addEventListener('input', processLiveSearchInput);
   
-  document.getElementById('form-cancel-btn').addEventListener('click', clearFormState);
-  
-  // Filter Matrix System Hooks
-  document.getElementById('sort-selector').addEventListener('change', runDynamicSortSync);
-  document.getElementById('sort-order-selector').addEventListener('change', runDynamicSortSync);
-  
-  // Real-time RegEx Compilation Loop Hook
-  document.getElementById('search-input').addEventListener('input', processingLiveSearchQuery);
   document.getElementById('clear-search-btn').addEventListener('click', () => {
-    const input = document.getElementById('search-input');
-    input.value = '';
+    document.getElementById('search-input').value = '';
     document.getElementById('search-error-msg').textContent = '';
     StateManager.setSearchPattern(null);
-    renderAppEcosystem();
+    refreshUserDisplay();
   });
 
-  // Settings Panel Commit Hooks
-  document.getElementById('save-settings-btn').addEventListener('click', applySettingsModifications);
-  
-  // File System Data Serialization Infrastructure Hooks
-  document.getElementById('data-export-btn').addEventListener('click', executeDatabaseExport);
-  document.getElementById('data-import-input').addEventListener('change', executeDatabaseIngestion);
+  document.getElementById('save-settings-btn').addEventListener('click', saveConfigSettings);
+  document.getElementById('data-export-btn').addEventListener('click', downloadBackupFile);
+  document.getElementById('data-import-input').addEventListener('change', uploadBackupFile);
 
-  // Accessible Navigation Multi-View Architecture Routing System
   document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      const sectionTargetId = link.getAttribute('href').substring(1);
-      
-      document.querySelectorAll('.app-section').forEach(sec => sec.style.display = 'none');
-      document.querySelectorAll('.nav-link').forEach(l => {
-        l.classList.remove('active');
-        l.removeAttribute('aria-current');
-      });
+      const targetPageId = link.getAttribute('href').substring(1);
+      document.querySelectorAll('.app-section').forEach(page => page.style.display = 'none');
+      document.querySelectorAll('.nav-link').forEach(l => { l.classList.remove('active'); l.removeAttribute('aria-current'); });
 
-      document.getElementById(sectionTargetId).style.display = 'block';
+      document.getElementById(targetPageId).style.display = 'block';
       link.classList.add('active');
       link.setAttribute('aria-current', 'page');
-      
-      announceToAriaScreenReader(`Mapsd view channel to ${sectionTargetId}`);
+      announceScreenReaderStatus(`Opened the ${targetPageId} tab channel`);
     });
   });
 
-  // Initialize view state layout rendering visibility rules
-  document.querySelectorAll('.app-section').forEach((sec, idx) => {
-    if (idx !== 0) sec.style.display = 'none';
-  });
+  document.querySelectorAll('.app-section').forEach((page, index) => { if (index !== 0) page.style.display = 'none'; });
 }
 
-function announceToAriaScreenReader(message, processingLevel = 'polite') {
-  const announcer = document.getElementById('aria-announcer');
-  announcer.setAttribute('aria-live', processingLevel === 'assertive' ? 'assertive' : 'polite');
-  announcer.textContent = message;
-  // Flushes tracking buffer after output cycle runs
-  setTimeout(() => { announcer.textContent = ''; }, 3000); 
+function announceScreenReaderStatus(msg) {
+  const box = document.getElementById('aria-announcer');
+  box.textContent = msg;
+  setTimeout(() => { box.textContent = ''; }, 3000);
 }
 
-function renderAppEcosystem() {
-  const state = StateManager.getState();
-  const glyph = CURRENCY_GLYPHS[state.settings.currency];
+function refreshUserDisplay() {
+  const currentAppState = StateManager.getState();
   
-  // Refresh standard layout text metric values
-  document.querySelectorAll('.active-currency-sym').forEach(el => el.textContent = glyph);
-  
-  populateFormDropdowns(state.settings.categories);
-  processCalculatedMetricsAndCharts(state, glyph);
-  processFilteredLedgerTable(state);
-}
-
-function populateFormDropdowns(categories) {
-  const catSelect = document.getElementById('input-category');
-  const currentSelectionValue = catSelect.value;
-  catSelect.innerHTML = '';
-  categories.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c;
-    opt.textContent = c;
-    catSelect.appendChild(opt);
-  });
-  if (currentSelectionValue) catSelect.value = currentSelectionValue;
-}
-
-function processCalculatedMetricsAndCharts(state, glyph) {
-  const records = state.transactions;
-  const targetCap = state.settings.budgetCap;
-  
-  document.getElementById('stat-total-count').textContent = records.length;
-  
-  // Compute global summation inside the active base conversion matrix scale
-  const totalInBaseUSD = records.reduce((sum, current) => sum + current.amount, 0);
-  const conversionRateValue = FX_INDEX[state.settings.currency];
-  const convertedTotalSumValue = totalInBaseUSD * conversionRateValue;
-  
-  document.getElementById('stat-total-amount').textContent = convertedTotalSumValue.toFixed(2);
-
-  // Compute the top spending stream category
-  const mappingFrequencies = {};
-  records.forEach(r => { mappingFrequencies[r.category] = (mappingFrequencies[r.category] || 0) + r.amount; });
-  let maximalCategoryToken = '—';
-  let extremeValuePeak = -1;
-  for (const [cat, sumValue] of Object.entries(mappingFrequencies)) {
-    if (sumValue > extremeValuePeak) { extremeValuePeak = sumValue; maximalCategoryToken = cat; }
+  if (currentAppState.settings.currency === "RWF" && currentAppState.settings.budgetCap === 500) {
+    currentAppState.settings.budgetCap = 50000;
+    document.getElementById('settings-budget-cap').value = 50000;
   }
-  document.getElementById('stat-top-category').textContent = maximalCategoryToken;
 
-  // Process operational limits and ARIA live feedback warnings
-  document.getElementById('cap-limit-display').textContent = `${glyph}${targetCap.toFixed(2)}`;
-  const remainingValueDelta = targetCap - convertedTotalSumValue;
-  document.getElementById('cap-remaining-display').textContent = `${glyph}${remainingValueDelta.toFixed(2)}`;
+  const symbolToken = CURRENCY_GLYPHS[currentAppState.settings.currency];
+  document.querySelectorAll('.active-currency-sym').forEach(el => el.textContent = symbolToken);
+  
+  loadDropdownCategoryOptions(currentAppState.settings.categories);
+  runDashboardCalculations(currentAppState, symbolToken);
+  buildExpensesTable(currentAppState);
+}
+
+function loadDropdownCategoryOptions(categories) {
+  const selectBox = document.getElementById('input-category');
+  selectBox.innerHTML = '';
+  categories.forEach(cat => {
+    const opt = document.createElement('option');
+    opt.value = cat; opt.textContent = cat; selectBox.appendChild(opt);
+  });
+}
+
+function runDashboardCalculations(state, currencySymbol) {
+  const list = state.transactions;
+  const currentLimit = state.settings.budgetCap;
+  document.getElementById('stat-total-count').textContent = list.length;
+  
+  const sumUSD = list.reduce((total, record) => total + record.amount, 0);
+  const calculatedTotalAmount = sumUSD * FX_INDEX[state.settings.currency];
+  document.getElementById('stat-total-amount').textContent = calculatedTotalAmount.toFixed(0);
+
+  const trackingMap = {};
+  list.forEach(item => { trackingMap[item.category] = (trackingMap[item.category] || 0) + item.amount; });
+  let leadingCategory = '—'; let maxCostValue = -1;
+  for (const [cat, value] of Object.entries(trackingMap)) {
+    if (value > maxCostValue) { maxCostValue = value; leadingCategory = cat; }
+  }
+  document.getElementById('stat-top-category').textContent = leadingCategory;
+
+  document.getElementById('cap-limit-display').textContent = `${currentLimit.toLocaleString()} ${currencySymbol}`;
+  const unspentBalanceValue = currentLimit - calculatedTotalAmount;
+  document.getElementById('cap-remaining-display').textContent = `${unspentBalanceValue.toLocaleString()} ${currencySymbol}`;
   
   const progressBarElement = document.getElementById('cap-progress-bar');
-  const percentageCapRatioValue = Math.min((convertedTotalSumValue / targetCap) * 100, 100);
-  progressBarElement.style.width = `${percentageCapRatioValue}%`;
-  progressBarElement.setAttribute('aria-valuenow', Math.round(percentageCapRatioValue));
+  const percentageValueRatio = Math.min((calculatedTotalAmount / currentLimit) * 100, 100);
+  progressBarElement.style.width = `${percentageValueRatio}%`;
 
-  const alertContainerBanner = document.getElementById('cap-live-feedback');
-  if (convertedTotalSumValue > targetCap) {
-    alertContainerBanner.className = "cap-status-banner danger";
-    alertContainerBanner.textContent = `Warning: Budget allocation ceiling crossed by ${glyph}${Math.abs(remainingValueDelta).toFixed(2)}!`;
-    alertContainerBanner.setAttribute('role', 'alert');
-    progressBarElement.style.backgroundColor = 'var(--system-error)';
+  const feedbackBannerElement = document.getElementById('cap-live-feedback');
+  if (calculatedTotalAmount > currentLimit) {
+    feedbackBannerElement.className = "cap-status-banner danger";
+    feedbackBannerElement.textContent = `Warning: Budget limit exceeded by ${Math.abs(unspentBalanceValue).toLocaleString()} ${currencySymbol}!`;
   } else {
-    alertContainerBanner.className = "cap-status-banner safe";
-    alertContainerBanner.textContent = "Safe Mode active. Financial metrics reside within functional guidelines.";
-    alertContainerBanner.setAttribute('role', 'status');
-    progressBarElement.style.backgroundColor = 'var(--color-primary)';
+    feedbackBannerElement.className = "cap-status-banner safe";
+    feedbackBannerElement.textContent = "Your spending is under control and within your budget limit.";
   }
 
-  // Draw the 7-day transaction velocity chart
-  generateHistoricalVelocityTrendChart(records);
+  drawWeeklyVisualChart(list);
 }
 
-function generateHistoricalVelocityTrendChart(records) {
-  const chartWrapper = document.getElementById('trend-chart-render');
-  chartWrapper.innerHTML = '';
-  
-  // Compute matching past boundaries arrays
-  const generatedDayColumnsArray = [];
+function drawWeeklyVisualChart(list) {
+  const chartWrapperElement = document.getElementById('trend-chart-render');
+  chartWrapperElement.innerHTML = '';
+  const datesArray = [];
   for (let i = 6; i >= 0; i--) {
-    const datePointer = new Date();
-    datePointer.setDate(datePointer.getDate() - i);
-    generatedDayColumnsArray.push(datePointer.toISOString().split('T')[0]);
+    const d = new Date(); d.setDate(d.getDate() - i); datesArray.push(d.toISOString().split('T')[0]);
   }
+  const dateMap = {}; datesArray.forEach(d => dateMap[d] = 0);
+  list.forEach(record => { if (dateMap[record.date] !== undefined) dateMap[record.date] += record.amount; });
+  const extremeMaxPeak = Math.max(...Object.values(dateMap), 10);
 
-  const mappingVolumeAggregateValues = {};
-  generatedDayColumnsArray.forEach(d => mappingVolumeAggregateValues[d] = 0);
-  records.forEach(r => { if (mappingVolumeAggregateValues[r.date] !== undefined) mappingVolumeAggregateValues[r.date] += r.amount; });
-
-  const absolutePeakVolumeMax = Math.max(...Object.values(mappingVolumeAggregateValues), 10);
-
-  generatedDayColumnsArray.forEach(dateKeyString => {
-    const aggregateValue = mappingVolumeAggregateValues[dateKeyString];
-    const columnPercentageScaleHeight = (aggregateValue / absolutePeakVolumeMax) * 100;
-    
-    const formattedShortDateMonth = dateKeyString.substring(5); // Strips year down to MM-DD
-    
-    const blockWrapperElement = document.createElement('div');
-    blockWrapperElement.className = 'chart-column-wrapper';
-    blockWrapperElement.innerHTML = `
-      <div class="chart-bar" style="height: ${columnPercentageScaleHeight}%" title="Aggregate Volume: ${aggregateValue.toFixed(2)}"></div>
-      <div class="chart-label">${formattedShortDateMonth}</div>
-    `;
-    chartWrapper.appendChild(blockWrapperElement);
+  datesArray.forEach(day => {
+    const aggregateCost = dateMap[day];
+    const columnPercentageScaleHeight = (aggregateCost / extremeMaxPeak) * 100;
+    const graphicColumnWrapper = document.createElement('div');
+    graphicColumnWrapper.className = 'chart-column-wrapper';
+    graphicColumnWrapper.innerHTML = `<div class="chart-bar" style="height: ${columnPercentageScaleHeight}%"></div>`;
+    chartWrapperElement.appendChild(graphicColumnWrapper);
   });
 }
 
-function processFilteredLedgerTable(state) {
-  const bodyTarget = document.getElementById('ledger-rows-target');
-  bodyTarget.innerHTML = '';
-  
-  let structuralRecordsResult = [...state.transactions];
-  const targetConversionFXRate = FX_INDEX[state.settings.currency];
+function buildExpensesTable(state) {
+  const tableBodyTarget = document.getElementById('ledger-rows-target');
+  tableBodyTarget.innerHTML = '';
+  let activeListItemsArray = [...state.transactions];
+  const fxConversionValue = FX_INDEX[state.settings.currency];
 
-  // Run filtering logic if an active search query pattern exists
   if (state.activeSearchQuery) {
-    structuralRecordsResult = structuralRecordsResult.filter(item => 
-      state.activeSearchQuery.test(item.description) || 
-      state.activeSearchQuery.test(item.category)
+    activeListItemsArray = activeListItemsArray.filter(item => 
+      state.activeSearchQuery.test(item.description) || state.activeSearchQuery.test(item.category)
     );
   }
 
-  // Run internal data sorting calculations
-  structuralRecordsResult.sort((alpha, beta) => {
-    let comparisonValueA = alpha[state.sortField];
-    let comparisonValueB = beta[state.sortField];
-
-    if (typeof comparisonValueA === 'string') {
-      return state.sortOrder === 'asc' 
-        ? comparisonValueA.localeCompare(comparisonValueB) 
-        : comparisonValueB.localeCompare(comparisonValueA);
-    } else {
-      return state.sortOrder === 'asc' 
-        ? comparisonValueA - comparisonValueB 
-        : comparisonValueB - comparisonValueA;
-    }
+  activeListItemsArray.sort((alpha, beta) => {
+    let comparisonValueA = alpha[state.sortField]; let comparisonValueB = beta[state.sortField];
+    return state.sortOrder === 'asc' ? (comparisonValueA > comparisonValueB ? 1 : -1) : (comparisonValueA < comparisonValueB ? 1 : -1);
   });
 
-  if (structuralRecordsResult.length === 0) {
-    bodyTarget.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No transaction ledgers fall under current filter boundaries.</td></tr>`;
+  if (activeListItemsArray.length === 0) {
+    tableBodyTarget.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">No records found matching your search terms.</td></tr>`;
     return;
   }
 
-  structuralRecordsResult.forEach(record => {
-    const convertedRowVolumeDisplay = (record.amount * targetConversionFXRate).toFixed(2);
-    const compiledSearchExpressionPattern = state.activeSearchQuery;
-
-    const modifiedDescriptionStringHTML = executeHighlightMark(record.description, compiledSearchExpressionPattern);
-    const modifiedCategoryStringHTML = executeHighlightMark(record.category, compiledSearchExpressionPattern);
-
+  activeListItemsArray.forEach(record => {
     const tableRowDOMElement = document.createElement('tr');
     tableRowDOMElement.innerHTML = `
-      <td data-label="Execution Date">${record.date}</td>
-      <td data-label="Description">${modifiedDescriptionStringHTML}</td>
-      <td data-label="Category">${modifiedCategoryStringHTML}</td>
-      <td data-label="Volume">${convertedRowVolumeDisplay}</td>
-      <td data-label="Action Controls">
-        <button class="btn btn-secondary btn-sm edit-action-trigger" data-id="${record.id}" style="padding:0.35rem 0.75rem; margin-right:0.5rem; font-size:0.8rem;">Edit</button>
-        <button class="btn btn-danger btn-sm delete-action-trigger" data-id="${record.id}" style="padding:0.35rem 0.75rem; font-size:0.8rem;">Delete</button>
+      <td data-label="Date Purchased">${record.date}</td>
+      <td data-label="Item Description">${executeHighlightMark(record.description, state.activeSearchQuery)}</td>
+      <td data-label="Category">${executeHighlightMark(record.category, state.activeSearchQuery)}</td>
+      <td data-label="Cost">${(record.amount * fxConversionValue).toLocaleString(undefined, {maximumFractionDigits: 0})}</td>
+      <td data-label="Actions">
+        <button class="btn btn-secondary edit-action" data-id="${record.id}">Edit</button>
+        <button class="btn btn-danger delete-action" data-id="${record.id}">Delete</button>
       </td>
     `;
-
-    // Intercept action button listeners
-    tableRowDOMElement.querySelector('.edit-action-trigger').addEventListener('click', () => triggerInlineRowModifications(record.id));
-    tableRowDOMElement.querySelector('.delete-action-trigger').addEventListener('click', () => fireDestructiveRecordDeletion(record.id));
-
-    bodyTarget.appendChild(tableRowDOMElement);
+    tableRowDOMElement.querySelector('.edit-action').addEventListener('click', () => editTargetRowItem(record.id));
+    tableRowDOMElement.querySelector('.delete-action').addEventListener('click', () => removeTargetRowItem(record.id));
+    tableBodyTarget.appendChild(tableRowDOMElement);
   });
 }
 
-function processingLiveSearchQuery(e) {
-  const searchBarStringVal = e.target.value;
-  const errorMsgBlock = document.getElementById('search-error-msg');
-  
-  if (!searchBarStringVal) {
-    errorMsgBlock.textContent = '';
-    StateManager.setSearchPattern(null);
-    renderAppEcosystem();
-    return;
-  }
-
+function processLiveSearchInput(e) {
   try {
-    const safeCompiledRegexObj = compileSafeRegex(searchBarStringVal, 'i');
-    errorMsgBlock.textContent = '';
-    StateManager.setSearchPattern(safeCompiledRegexObj);
-    renderAppEcosystem();
+    const safelyCompiledRegex = compileSafeRegex(e.target.value, 'i');
+    document.getElementById('search-error-msg').textContent = '';
+    StateManager.setSearchPattern(safelyCompiledRegex);
+    refreshUserDisplay();
   } catch (err) {
-    // Graceful routing of syntax parsing failures during runtime regex parsing
-    errorMsgBlock.textContent = `RegEx Synthesis Fault: ${err.message}`;
+    document.getElementById('search-error-msg').textContent = `Invalid search rule layout.`;
   }
 }
 
-function runDynamicSortSync() {
-  const f = document.getElementById('sort-selector').value;
-  const o = document.getElementById('sort-order-selector').value;
-  StateManager.setSort(f, o);
-  renderAppEcosystem();
+function refreshSortedDisplay() {
+  StateManager.setSort(document.getElementById('sort-selector').value, document.getElementById('sort-order-selector').value);
+  refreshUserDisplay();
 }
 
-function handleFormSubmission(e) {
+function handleFormSubmitAction(e) {
   e.preventDefault();
-  
-  const idValue = document.getElementById('form-record-id').value;
-  const descValue = document.getElementById('input-description').value;
-  const amountValue = document.getElementById('input-amount').value;
-  const dateValue = document.getElementById('input-date').value;
-  const catValue = document.getElementById('input-category').value;
+  const id = document.getElementById('form-record-id').value;
+  const description = document.getElementById('input-description').value;
+  const amount = document.getElementById('input-amount').value;
+  const date = document.getElementById('input-date').value;
+  const category = document.getElementById('input-category').value;
 
-  // Run full verification pipeline validations
-  const dDiag = runFieldDiagnostic('description', descValue);
-  const aDiag = runFieldDiagnostic('amount', amountValue);
-  const tDiag = runFieldDiagnostic('date', dateValue);
+  const descValidationReport = runFieldDiagnostic('description', description);
+  const amountValidationReport = runFieldDiagnostic('amount', amount);
+  const dateValidationReport = runFieldDiagnostic('date', date);
 
-  document.getElementById('err-description').textContent = dDiag.message;
-  document.getElementById('err-amount').textContent = aDiag.message;
-  document.getElementById('err-date').textContent = tDiag.message;
+  document.getElementById('err-description').textContent = descValidationReport.message;
+  document.getElementById('err-amount').textContent = amountValidationReport.message;
+  document.getElementById('err-date').textContent = dateValidationReport.message;
 
-  if (!dDiag.valid || !aDiag.valid || !tDiag.valid) {
-    announceToAriaScreenReader("Form evaluation failed. Review configuration criteria constraints.", "assertive");
-    return;
-  }
+  if (!descValidationReport.valid || !amountValidationReport.valid || !dateValidationReport.valid) return;
 
-  // Adjust input payload downward to baseline system reference value (USD) if user saves in foreign currency
-  const state = StateManager.getState();
-  const conversionNormalizationIndexValue = FX_INDEX[state.settings.currency];
-  const standardNormalizedUSDVolumeValue = parseFloat(amountValue) / conversionNormalizationIndexValue;
-
-  const transactionPayloadData = {
-    description: descValue,
-    amount: standardNormalizedUSDVolumeValue,
-    date: dateValue,
-    category: catValue
-  };
-
-  if (idValue) transactionPayloadData.id = idValue;
-
-  StateManager.addOrUpdateTransaction(transactionPayloadData);
-  clearFormState();
-  renderAppEcosystem();
-  announceToAriaScreenReader("Transaction successfully written to data vault.");
+  const currencyNormalizationScaleIndexValue = FX_INDEX[StateManager.getState().settings.currency];
+  StateManager.addOrUpdateTransaction({ id, description, amount: parseFloat(amount) / currencyNormalizationScaleIndexValue, date, category });
+  clearFormFieldsLayout();
+  refreshUserDisplay();
 }
 
-function triggerInlineRowModifications(id) {
-  const state = StateManager.getState();
-  const targetTx = state.transactions.find(t => t.id === id);
-  if (!targetTx) return;
+function editTargetRowItem(id) {
+  const targetedItemDataModel = StateManager.getState().transactions.find(t => t.id === id);
+  if (!targetedItemDataModel) return;
+  const currencyNormalizationScaleIndexValue = FX_INDEX[StateManager.getState().settings.currency];
 
-  const currentActiveConversionIndex = FX_INDEX[state.settings.currency];
+  document.getElementById('form-record-id').value = targetedItemDataModel.id;
+  document.getElementById('input-description').value = targetedItemDataModel.description;
+  document.getElementById('input-amount').value = (targetedItemDataModel.amount * currencyNormalizationScaleIndexValue).toFixed(0);
+  document.getElementById('input-date').value = targetedItemDataModel.date;
+  document.getElementById('input-category').value = targetedItemDataModel.category;
 
-  document.getElementById('form-record-id').value = targetTx.id;
-  document.getElementById('input-description').value = targetTx.description;
-  document.getElementById('input-amount').value = (targetTx.amount * currentActiveConversionIndex).toFixed(2);
-  document.getElementById('input-date').value = targetTx.date;
-  document.getElementById('input-category').value = targetTx.category;
-
-  document.getElementById('form-submit-btn').textContent = "Apply In-Place Mutation";
+  document.getElementById('form-submit-btn').textContent = "Update Expense";
   document.getElementById('form-cancel-btn').style.display = 'inline-flex';
-  
+  document.getElementById('form-section').style.display = 'block';
   document.getElementById('form-section').scrollIntoView({ behavior: 'smooth' });
-  document.getElementById('input-description').focus();
 }
 
-function fireDestructiveRecordDeletion(id) {
-  if (confirm("Execute removal sequence on targeted dataset row? This operation is permanent.")) {
+function removeTargetRowItem(id) {
+  if (confirm("Are you sure you want to permanently delete this expense item?")) {
     StateManager.deleteTransaction(id);
-    renderAppEcosystem();
-    announceToAriaScreenReader("Record erased from persistent system matrix lines.", "assertive");
+    refreshUserDisplay();
   }
 }
 
-function clearFormState() {
+function clearFormFieldsLayout() {
   document.getElementById('transaction-mutation-form').reset();
   document.getElementById('form-record-id').value = '';
-  document.getElementById('err-description').textContent = '';
-  document.getElementById('err-amount').textContent = '';
-  document.getElementById('err-date').textContent = '';
-  document.getElementById('form-submit-btn').textContent = "Commit Transaction";
+  document.getElementById('form-submit-btn').textContent = "Save Expense";
   document.getElementById('form-cancel-btn').style.display = 'none';
 }
 
-function applySettingsModifications() {
-  const capVal = document.getElementById('settings-budget-cap').value;
-  const currencySelectorVal = document.getElementById('settings-currency-selector').value;
-
-  StateManager.updateSettings(capVal, currencySelectorVal);
-  renderAppEcosystem();
-  announceToAriaScreenReader("Global environment parameter matrices updated successfully.");
+function dropEditingState() {
+  clearFormFieldsLayout();
 }
 
-function executeDatabaseExport() {
-  const state = StateManager.getState();
-  const serializedOutputPayloadString = JSON.stringify(state.transactions, null, 2);
-  
-  const systemDataBlobStream = new Blob([serializedOutputPayloadString], { type: 'application/json' });
-  const virtualDownloadLinkAnchor = document.createElement('a');
-  
-  virtualDownloadLinkAnchor.href = URL.createObjectURL(systemDataBlobStream);
-  virtualDownloadLinkAnchor.download = `ledger_manifest_export_${new Date().toISOString().split('T')[0]}.json`;
-  document.body.appendChild(virtualDownloadLinkAnchor);
-  virtualDownloadLinkAnchor.click();
-  document.body.removeChild(virtualDownloadLinkAnchor);
-  
-  announceToAriaScreenReader("Ecosystem memory array packaged and downloaded successfully.");
+function saveConfigSettings() {
+  StateManager.updateSettings(document.getElementById('settings-budget-cap').value, document.getElementById('settings-currency-selector').value);
+  refreshUserDisplay();
 }
 
-function executeDatabaseIngestion(e) {
-  const fileReferencePointer = e.target.files[0];
-  if (!fileReferencePointer) return;
+function downloadBackupFile() {
+  const outputStringPayload = JSON.stringify(StateManager.getState().transactions, null, 2);
+  const streamBlobData = new Blob([outputStringPayload], { type: 'application/json' });
+  const virtualDownloadAnchorElement = document.createElement('a');
+  virtualDownloadAnchorElement.href = URL.createObjectURL(streamBlobData); virtualDownloadAnchorElement.download = 'my_expense_backup.json'; virtualDownloadAnchorElement.click();
+}
 
-  const streamReaderEngine = new FileReader();
-  streamReaderEngine.onload = function(evt) {
+function uploadBackupFile(e) {
+  const pointerFileReference = e.target.files[0]; if (!pointerFileReference) return;
+  const fileStreamReaderEngine = new FileReader();
+  fileStreamReaderEngine.onload = function(evt) {
     try {
-      const parsedDataMatrixPayload = JSON.parse(evt.target.result);
-      if (validateIncomingJSON(parsedDataMatrixPayload)) {
-        StateManager.ingestImportedArray(parsedDataMatrixPayload);
-        renderAppEcosystem();
-        announceToAriaScreenReader("JSON Database successfully verified and mounted to local storage.");
-      } else {
-        alert("Verification Failure: JSON payload contains schema architecture errors.");
-        announceToAriaScreenReader("Ingestion blocked due to schema field formatting anomalies.", "assertive");
-      }
-    } catch {
-      alert("Syntax Error: Targeted file fails basic JSON parsing parameters.");
-    }
+      const parsedArrayMatrixData = JSON.parse(evt.target.result);
+      if (validateIncomingJSON(parsedArrayMatrixData)) { StateManager.ingestImportedArray(parsedArrayMatrixData); refreshUserDisplay(); }
+      else { alert("The data format inside this backup file is invalid."); }
+    } catch { alert("Could not open file. Make sure it is a valid JSON file."); }
   };
-  streamReaderEngine.readAsText(fileReferencePointer);
+  fileStreamReaderEngine.readAsText(pointerFileReference);
 }

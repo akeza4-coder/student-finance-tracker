@@ -12,22 +12,18 @@ export const StateManager = {
   getState: () => appState,
   
   addOrUpdateTransaction: (record) => {
-    const idx = appState.transactions.findIndex(t => t.id === record.id);
-    const timestamp = new Date().toISOString();
+    const index = appState.transactions.findIndex(t => t.id === record.id);
+    const now = new Date().toISOString();
     
-    if (idx !== -1) {
-      // Execution path for modifications on existing models
-      const original = appState.transactions[idx];
-      appState.transactions[idx] = { ...original, ...record, updatedAt: timestamp };
+    if (index !== -1) {
+      appState.transactions[index] = { ...appState.transactions[index], ...record, updatedAt: now };
     } else {
-      // Pure data addition pipeline logic execution
-      const newRecord = {
+      appState.transactions.push({
         ...record,
-        id: `txn_${crypto.randomUUID ? crypto.randomUUID().split('-')[0] : Math.random().toString(36).substring(2,9)}`,
-        createdAt: timestamp,
-        updatedAt: timestamp
-      };
-      appState.transactions.push(newRecord);
+        id: 'item_' + Math.random().toString(36).substring(2, 9),
+        createdAt: now,
+        updatedAt: now
+      });
     }
     saveLocalLedger(appState.transactions);
   },
@@ -38,13 +34,13 @@ export const StateManager = {
   },
 
   updateSettings: (newCap, newCurrency) => {
-    appState.settings.budgetCap = parseFloat(newCap) || 500;
-    appState.settings.currency = newCurrency || "USD";
+    appState.settings.budgetCap = parseFloat(newCap) || 50000;
+    appState.settings.currency = newCurrency || "RWF";
     saveSystemSettings(appState.settings);
   },
 
-  ingestImportedArray: (validatedArray) => {
-    appState.transactions = validatedArray;
+  ingestImportedArray: (array) => {
+    appState.transactions = array;
     saveLocalLedger(appState.transactions);
   },
 

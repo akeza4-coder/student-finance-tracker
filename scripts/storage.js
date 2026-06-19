@@ -1,47 +1,45 @@
-const METRIC_STORAGE_KEY = 'apex:finance:ledger';
-const CONFIG_STORAGE_KEY = 'apex:finance:settings';
+const STORAGE_KEY_DATA = 'student:tracker:expenses';
+const STORAGE_KEY_CONFIG = 'student:tracker:settings';
 
 export const initialCategories = ["Food", "Books", "Transport", "Entertainment", "Fees", "Other"];
 
 export function getSystemSettings() {
-  const defaults = { budgetCap: 500, currency: "USD", categories: initialCategories };
+  const defaultSettings = { budgetCap: 50000, currency: "RWF", categories: initialCategories };
   try {
-    const data = localStorage.getItem(CONFIG_STORAGE_KEY);
-    return data ? JSON.parse(data) : defaults;
+    const data = localStorage.getItem(STORAGE_KEY_CONFIG);
+    return data ? JSON.parse(data) : defaultSettings;
   } catch {
-    return defaults;
+    return defaultSettings;
   }
 }
 
 export function saveSystemSettings(settings) {
-  localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(settings));
+  localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(settings));
 }
 
 export function loadLocalLedger() {
   try {
-    return JSON.parse(localStorage.getItem(METRIC_STORAGE_KEY) || '[]');
+    return JSON.parse(localStorage.getItem(STORAGE_KEY_DATA) || '[]');
   } catch {
     return [];
   }
 }
 
 export function saveLocalLedger(ledgerArray) {
-  localStorage.setItem(METRIC_STORAGE_KEY, JSON.stringify(ledgerArray));
+  localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(ledgerArray));
 }
 
 export function validateIncomingJSON(payload) {
   if (!Array.isArray(payload)) return false;
-  
-  // High-fidelity integrity scanning of fields inside the schema runtime
-  return payload.every(record => {
+  return payload.every(item => {
     return (
-      typeof record.id === 'string' &&
-      typeof record.description === 'string' &&
-      typeof record.amount === 'number' &&
-      typeof record.category === 'string' &&
-      /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(record.date) &&
-      typeof record.createdAt === 'string' &&
-      typeof record.updatedAt === 'string'
+      typeof item.id === 'string' &&
+      typeof item.description === 'string' &&
+      typeof item.amount === 'number' &&
+      typeof item.category === 'string' &&
+      /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(item.date) &&
+      typeof item.createdAt === 'string' &&
+      typeof item.updatedAt === 'string'
     );
   });
 }
