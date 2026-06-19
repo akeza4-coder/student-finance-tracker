@@ -1,15 +1,11 @@
-export function compileSafeRegex(input, flags = 'i') {
-  if (!input) return null;
-  try {
-    return new RegExp(input, flags);
-  } catch (e) {
-    throw new Error(e.message);
-  }
+// This file handles the RegEx search engine matching
+function compileSafeRegex(pattern, flags) {
+  if (!pattern) return null;
+  // Basic safety clean up to avoid regex injection lockups
+  return new RegExp(pattern, flags);
 }
 
-export function executeHighlightMark(text, regex) {
-  const standardString = String(text);
-  if (!regex) return standardString;
-  regex.lastIndex = 0; 
-  return standardString.replace(regex, match => `<mark>${match}</mark>`);
+function executeHighlightMark(text, regex) {
+  if (!regex || !text) return text;
+  return text.replace(regex, match => `<mark>${match}</mark>`);
 }

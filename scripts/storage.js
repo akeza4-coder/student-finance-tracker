@@ -1,45 +1,59 @@
-const STORAGE_KEY_DATA = 'student:tracker:expenses';
-const STORAGE_KEY_CONFIG = 'student:tracker:settings';
+// This file handles saving data to the browser's local memory
+const StateManager = {
+  storageKey: 'student_finance_records',
 
-export const initialCategories = ["Food", "Books", "Transport", "Entertainment", "Fees", "Other"];
+  getState() {
+    const rawData = localStorage.getItem(this.storageKey);
+    if (!rawData) {
+      return {
+        transactions: [],
+        settings: { currency: 'RWF', budgetCap: 50000, categories: ["Food", "Housing", "Transport", "Books", "Other"] },
+        activeSearchQuery: null
+      };
+    }
+    const parsed = JSON.parse(rawData);
+    parsed.activeSearchQuery = null; // reset search on load
+    return parsed;
+  },
 
-export function getSystemSettings() {
-  const defaultSettings = { budgetCap: 50000, currency: "RWF", categories: initialCategories };
-  try {
-    const data = localStorage.getItem(STORAGE_KEY_CONFIG);
-    return data ? JSON.parse(data) : defaultSettings;
-  } catch {
-    return defaultSettings;
+  saveState(state) {
+    const clone = { ...state };
+    delete clone.activeSearchQuery; // don't save raw regex objects
+    localStorage.setItem(this.storageKey, JSON.stringify(clone));
+  },
+
+  addOrUpdateTransaction(record) {
+    const state = this.getState();
+    const index = state.transactions.findIndex(t => t.id === record.id);
+    
+    if (index !== -1) {
+      state.transactions[index] = record;
+    } else {
+      state.transactions.push(record);
+    }
+    
+    this.saveState(state);
+  },
+
+  deleteTransaction(id) {
+    const state = this.getState();
+    state.transactions = state.transactions.filter(t => t.id !== id);
+    this.saveState(state);
+  },
+
+  updateSettings(budgetCap, currency) {
+    const state = this.getState();
+    state.settings.budgetCap = parseFloat(budgetCap) || 50000;
+    state.settings.currency = currency || 'RWF';
+    this.saveState(state);
+  },
+
+  setSearchPattern(regex) {
+    // Temporary runtime storage, not saved to localStorage
+    window.currentSearchRegex = regex;
   }
-}
+};
 
-export function saveSystemSettings(settings) {
-  localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(settings));
-}
-
-export function loadLocalLedger() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY_DATA) || '[]');
-  } catch {
-    return [];
-  }
-}
-
-export function saveLocalLedger(ledgerArray) {
-  localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(ledgerArray));
-}
-
-export function validateIncomingJSON(payload) {
-  if (!Array.isArray(payload)) return false;
-  return payload.every(item => {
-    return (
-      typeof item.id === 'string' &&
-      typeof item.description === 'string' &&
-      typeof item.amount === 'number' &&
-      typeof item.category === 'string' &&
-      /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(item.date) &&
-      typeof item.createdAt === 'string' &&
-      typeof item.updatedAt === 'string'
-    );
-  });
+function validateIncomingJSON(data) {
+  return Array.isArray(data) && data.every(item => item.id && item.description && item.amount);
 }
